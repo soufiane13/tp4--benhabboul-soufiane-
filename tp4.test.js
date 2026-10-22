@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 import { ColissimoAdapter, DhlAdapter } from './shipping/adapters.js';
 import { RetryQuote, CachedQuote } from './shipping/decorators.js';
 import { ColissimoApi, DhlClient } from './carrierApis.js';
+import { ShippingService } from './shipping/ShippingService.js'
 
 import { createChannel, registerChannel, Channel } from './notifications/channels.js';
 
@@ -101,3 +102,32 @@ test('Builder: interface fluide, validation dans build(), objet immuable', () =>
     await composed.getQuote({ weightKg: 2, zip: '75011' }); // Expiré -> Appel réel
     assert.equal(dhlClient.calls, 3);
   });
+
+  test('Facade: le moins cher, puis le plus rapide, un transporteur en panne est ignoré', async () => {
+    const colissimo = new ColissimoAdapter(new ColissimoApi()); // 2kg -> 9.95€, 10kg -> 29.95€
+    const dhl = new DhlAdapter(new DhlClient()); // 2kg -> 11€, 10kg -> 23€
+  
+    const shipping = new ShippingService([colissimo, dhl]);
+  
+    // 2 kg -> Colissimo moins cher
+    const best2kg = await shipping.bestQuote({ weightKg: 2, zip: '75011' });
+    assert.equal(best2kg.carrier, 'Colissimo');
+    assert.equal(best2kg.price, 9.95);
+  
+    // 10 kg -> DHL moins cher
+    const best10kg = await shipping.bestQuote({ weightKg: 10, zip: '75011' });
+    assert.equal(best10kg.carrier, 'DHL');
+    assert.equal(best10kg.price, 23);
+  
+    // Transporteur en panne ignoré
+    const dhlFail = new DhlAdapter(new DhlClient({ failFirst: 10 }));
+    const shippingFail = new ShippingService([colissimo, dhlFail]);
+    const bestWithFail = await shippingFail.bestQuote({ weightKg: 10, zip: '75011' });
+    assert.equal(bestWithFail.carrier, 'Colissimo'); // Il se rabat sur Colissimo
+  
+    // Liste vide -> Erreur
+    const shippingEmpty = new ShippingService([]);
+    await assert.rejects(shippingEmpty.bestQuote({ weightKg: 2, zip: '75011' }), /Aucun transporteur disponible/);
+  });
+
+  

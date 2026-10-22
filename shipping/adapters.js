@@ -1,5 +1,5 @@
 // shipping/adapters.js
-import { ColissimoApi, DhlClient } from '../../tp4/carrierApis.js';
+import { ColissimoApi, DhlClient } from '../carrierApis.js';
 
 export class ColissimoAdapter {
   constructor(api = new ColissimoApi()) {

@@ -4,7 +4,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { ColissimoAdapter, DhlAdapter } from './shipping/adapters.js';
 import { RetryQuote, CachedQuote } from './shipping/decorators.js';
-import { ColissimoApi, DhlClient } from '../tp4/carrierApis.js';
+import { ColissimoApi, DhlClient } from './carrierApis.js';
 
 import { createChannel, registerChannel, Channel } from './notifications/channels.js';
 
